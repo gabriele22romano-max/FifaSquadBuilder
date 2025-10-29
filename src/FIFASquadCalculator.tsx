@@ -462,9 +462,9 @@ const FIFASquadCalculator = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => toggleIF(target.rating)}
+                        onClick={() => toggleIF(target.rating, target.needsIF)}
                         className={`p-2 rounded-lg transition ${target.needsIF ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700'}`}
-                        title={target.needsIF ? 'Rimuovi requisito IF' : 'Aggiungi requisito IF'}
+                        title={target.needsIF ? 'Sposta a senza IF' : 'Sposta a con IF'}
                       >
                         <Star className="w-4 h-4 text-white" />
                       </button>
