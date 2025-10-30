@@ -41,15 +41,16 @@ const FIFASquadCalculator = () => {
     
     let adjustedAvg = adjustedTotal / count;
     
-    // Controlla se la combinazione è del tipo specifico: (z+1)x1, (z)x6, (z-1)x3, (z-2)x1
+    // Regola speciale EA: se la combinazione è esattamente (z+1)x1, (z)x6, (z-1)x3, (z-2)x1
+    // aggiungi +0.7 alla media aggiustata
     if (targetRating !== null && players.length === 4) {
-      const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
+      const sorted = [...players].sort((a, b) => b.rating - a.rating);
       
-      if (sortedPlayers[0].rating === targetRating + 1 && sortedPlayers[0].count === 1 &&
-          sortedPlayers[1].rating === targetRating && sortedPlayers[1].count === 6 &&
-          sortedPlayers[2].rating === targetRating - 1 && sortedPlayers[2].count === 3 &&
-          sortedPlayers[3].rating === targetRating - 2 && sortedPlayers[3].count === 1) {
-        adjustedAvg += 0.1;
+      if (sorted[0].rating === targetRating + 1 && sorted[0].count === 1 &&
+          sorted[1].rating === targetRating && sorted[1].count === 6 &&
+          sorted[2].rating === targetRating - 1 && sorted[2].count === 3 &&
+          sorted[3].rating === targetRating - 2 && sorted[3].count === 1) {
+        adjustedAvg += 0.7;
       }
     }
     
