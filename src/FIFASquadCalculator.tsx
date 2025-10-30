@@ -24,7 +24,7 @@ const FIFASquadCalculator = () => {
   const [calculating, setCalculating] = useState(false);
 
   // Funzione per calcolare il rating FIFA
-  const calculateFIFARating = (players) => {
+  const calculateFIFARating = (players, targetRating = null) => {
     const total = players.reduce((sum, p) => sum + p.rating * p.count, 0);
     const count = players.reduce((sum, p) => sum + p.count, 0);
     const avg = total / count;
@@ -39,7 +39,20 @@ const FIFASquadCalculator = () => {
       }
     });
     
-    const adjustedAvg = adjustedTotal / count;
+    let adjustedAvg = adjustedTotal / count;
+    
+    // Controlla se la combinazione è del tipo specifico: (z+1)x1, (z)x6, (z-1)x3, (z-2)x1
+    if (targetRating !== null && players.length === 4) {
+      const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
+      
+      if (sortedPlayers[0].rating === targetRating + 1 && sortedPlayers[0].count === 1 &&
+          sortedPlayers[1].rating === targetRating && sortedPlayers[1].count === 6 &&
+          sortedPlayers[2].rating === targetRating - 1 && sortedPlayers[2].count === 3 &&
+          sortedPlayers[3].rating === targetRating - 2 && sortedPlayers[3].count === 1) {
+        adjustedAvg += 0.02;
+      }
+    }
+    
     const rounded2Dec = Math.round(adjustedAvg * 100) / 100;
     
     const decimals = rounded2Dec - Math.floor(rounded2Dec);
@@ -78,7 +91,7 @@ const FIFASquadCalculator = () => {
         }
         
         if (total === squadSize) {
-          const { adjustedAvg, finalRating } = calculateFIFARating(players);
+          const { adjustedAvg, finalRating } = calculateFIFARating(players, targetRating);
           if (finalRating === targetRating && adjustedAvg >= minTarget && adjustedAvg <= maxTarget) {
             validCombinations.push({ ...currentCombo });
           }
@@ -102,8 +115,18 @@ const FIFASquadCalculator = () => {
     
     if (validCombinations.length === 0) return null;
     
-    // Ordina per: 1) media aggiustata più bassa (più vicina al minimo), 2) diversità
+    // Ordina per: 1) Diversità (risparmio carte alte), 2) Media più bassa
+    // Questo approccio garantisce più flessibilità per completare tutte le rose
     validCombinations.sort((a, b) => {
+      // Prima priorità: risparmia le carte alte (diversità)
+      const diversityA = calculateDiversityScore(a);
+      const diversityB = calculateDiversityScore(b);
+      
+      if (Math.abs(diversityA - diversityB) > 0.5) {
+        return diversityA - diversityB;
+      }
+      
+      // Seconda priorità: media più bassa (solo se diversità simile)
       const playersA = [];
       const playersB = [];
       
@@ -114,16 +137,10 @@ const FIFASquadCalculator = () => {
         if (count > 0) playersB.push({ rating: parseInt(rating), count });
       }
       
-      const { adjustedAvg: avgA } = calculateFIFARating(playersA);
-      const { adjustedAvg: avgB } = calculateFIFARating(playersB);
+      const { adjustedAvg: avgA } = calculateFIFARating(playersA, targetRating);
+      const { adjustedAvg: avgB } = calculateFIFARating(playersB, targetRating);
       
-      // Preferisci la media più bassa (più vicina al targetRating)
-      if (Math.abs(avgA - avgB) > 0.01) {
-        return avgA - avgB;
-      }
-      
-      // A parità di media, preferisci maggiore diversità (meno carte alte)
-      return calculateDiversityScore(a) - calculateDiversityScore(b);
+      return avgA - avgB;
     });
     
     let bestCombo = validCombinations[0];
@@ -238,7 +255,7 @@ const FIFASquadCalculator = () => {
             }
             players.sort((a, b) => b.rating - a.rating);
             
-            const { adjustedAvg, rounded2Dec, finalRating } = calculateFIFARating(players);
+            const { adjustedAvg, rounded2Dec, finalRating } = calculateFIFARating(players, target.rating);
             
             result.push({
               squadNum: squadNum++,
