@@ -58,6 +58,51 @@ const FIFASquadCalculator = () => {
     return score;
   };
 
+  // Patterns fallback (offset -> count)
+  const FALLBACK_PATTERNS = {
+    'A': { // 1x(+1), 6x(=), 3x(-1), 1x(-2)
+      offsets: { 1:1, 0:6, -1:3, -2:1 }
+    },
+    'B': { // 9x(=), 2x(-1)
+      offsets: { 0:9, -1:2 }
+    },
+    'C': { // 2x(+1), 3x(=), 6x(-1)
+      offsets: { 1:2, 0:3, -1:6 }
+    },
+    'D': { // 3x(+1), 2x(=), 3x(-1), 3x(-2)
+      offsets: { 1:3, 0:2, -1:3, -2:3 }
+    }
+  };
+
+  const tryFallbackPatterns = (targetRating, available) => {
+    // Prova i pattern A..D senza controllare la media: solo disponibilità delle carte
+    for (const [patternName, pattern] of Object.entries(FALLBACK_PATTERNS)) {
+      const combo = {};
+      let possible = true;
+
+      for (const [offsetStr, count] of Object.entries(pattern.offsets)) {
+        const offset = parseInt(offsetStr);
+        const rating = targetRating + offset;
+        // assicurati che il rating sia tra le chiavi disponibili
+        if (!available.hasOwnProperty(rating)) {
+          possible = false;
+          break;
+        }
+        // Rispetta sia i Totali che le Uniche (come nel resto dell'app)
+        if (available[rating].available < count || available[rating].unique < count) {
+          possible = false;
+          break;
+        }
+        combo[rating] = count;
+      }
+
+      if (possible) {
+        return { combo, fallbackUsed: true, patternName };
+      }
+    }
+    return null;
+  };
+
   const findCombination = (targetRating, available, needsIF = false) => {
     const squadSize = 11;
     const minTarget = targetRating - 1 + 0.96;
@@ -100,94 +145,91 @@ const FIFASquadCalculator = () => {
     
     tryCombo(0, {}, squadSize);
     
-    if (validCombinations.length === 0) return null;
-    
-    // Ordina per: 1) media aggiustata più bassa (più vicina al minimo), 2) diversità
-    validCombinations.sort((a, b) => {
-      const playersA = [];
-      const playersB = [];
-      
-      for (const [rating, count] of Object.entries(a)) {
-        if (count > 0) playersA.push({ rating: parseInt(rating), count });
-      }
-      for (const [rating, count] of Object.entries(b)) {
-        if (count > 0) playersB.push({ rating: parseInt(rating), count });
-      }
-      
-      const { adjustedAvg: avgA } = calculateFIFARating(playersA);
-      const { adjustedAvg: avgB } = calculateFIFARating(playersB);
-      
-      // Preferisci la media più bassa (più vicina al targetRating)
-      if (Math.abs(avgA - avgB) > 0.01) {
-        return avgA - avgB;
-      }
-      
-      // A parità di media, preferisci maggiore diversità (meno carte alte)
-      return calculateDiversityScore(a) - calculateDiversityScore(b);
-    });
-    
-    let bestCombo = validCombinations[0];
-    let ifRating = null;
-    let replacedRating = null;
-    
-    // Se serve una IF, sostituisci una carta con una IF disponibile
-    if (needsIF) {
-      // Prova a sostituire una carta con una IF, cercando di usare la IF più BASSA possibile
-      const sortedRatings = Object.keys(bestCombo)
-        .filter(r => bestCombo[r] > 0)
-        .map(Number)
-        .sort((a, b) => a - b); // Ordina dal più basso al più alto
-      
-      // Trova tutte le IF disponibili ordinate dal più basso al più alto
-      const availableIFs = ratings
-        .filter(r => available[r].if > 0)
-        .sort((a, b) => a - b);
-      
-      let replaced = false;
-      
-      // Prova prima a sostituire con la IF più bassa disponibile
-      for (const ifRatingCandidate of availableIFs) {
-        if (replaced) break;
+    // If we found valid combinations that satisfy adjusted average -> return one
+    if (validCombinations.length > 0) {
+      // Ordina per: 1) media aggiustata più bassa (più vicina al minimo), 2) diversità
+      validCombinations.sort((a, b) => {
+        const playersA = [];
+        const playersB = [];
         
-        // Per ogni IF, prova a sostituire una carta partendo dalle più basse
-        for (const rating of sortedRatings) {
-          // Prova a sostituire una carta di 'rating' con una IF di 'ifRatingCandidate'
-          const testCombo = { ...bestCombo };
-          testCombo[rating] = (testCombo[rating] || 0) - 1;
-          if (testCombo[rating] === 0) delete testCombo[rating];
-          testCombo[ifRatingCandidate] = (testCombo[ifRatingCandidate] || 0) + 1;
-          
-          // Verifica che abbiamo abbastanza carte
-          if (testCombo[rating] !== undefined && testCombo[rating] < 0) continue;
-          if (testCombo[ifRatingCandidate] > available[ifRatingCandidate].available + 1) continue;
-          
-          // Calcola il nuovo rating
-          const players = [];
-          for (const [r, count] of Object.entries(testCombo)) {
-            if (count > 0) {
-              players.push({ rating: parseInt(r), count });
+        for (const [rating, count] of Object.entries(a)) {
+          if (count > 0) playersA.push({ rating: parseInt(rating), count });
+        }
+        for (const [rating, count] of Object.entries(b)) {
+          if (count > 0) playersB.push({ rating: parseInt(rating), count });
+        }
+        
+        const { adjustedAvg: avgA } = calculateFIFARating(playersA);
+        const { adjustedAvg: avgB } = calculateFIFARating(playersB);
+        
+        if (Math.abs(avgA - avgB) > 0.01) {
+          return avgA - avgB;
+        }
+        return calculateDiversityScore(a) - calculateDiversityScore(b);
+      });
+
+      let bestCombo = validCombinations[0];
+      let ifRating = null;
+      let replacedRating = null;
+
+      // Se serve una IF, sostituisci una carta con una IF disponibile
+      if (needsIF) {
+        const sortedRatings = Object.keys(bestCombo)
+          .filter(r => bestCombo[r] > 0)
+          .map(Number)
+          .sort((a, b) => a - b);
+        
+        const availableIFs = ratings
+          .filter(r => available[r].if > 0)
+          .sort((a, b) => a - b);
+        
+        let replaced = false;
+        
+        for (const ifRatingCandidate of availableIFs) {
+          if (replaced) break;
+          for (const rating of sortedRatings) {
+            const testCombo = { ...bestCombo };
+            testCombo[rating] = (testCombo[rating] || 0) - 1;
+            if (testCombo[rating] === 0) delete testCombo[rating];
+            testCombo[ifRatingCandidate] = (testCombo[ifRatingCandidate] || 0) + 1;
+            
+            if (testCombo[rating] !== undefined && testCombo[rating] < 0) continue;
+            if (testCombo[ifRatingCandidate] > available[ifRatingCandidate].available + 1) continue;
+            
+            const players = [];
+            for (const [r, count] of Object.entries(testCombo)) {
+              if (count > 0) {
+                players.push({ rating: parseInt(r), count });
+              }
+            }
+            
+            const { adjustedAvg, finalRating } = calculateFIFARating(players);
+            if (finalRating === targetRating && adjustedAvg >= minTarget && adjustedAvg <= maxTarget) {
+              bestCombo = testCombo;
+              ifRating = ifRatingCandidate;
+              replacedRating = rating;
+              replaced = true;
+              break;
             }
           }
-          
-          const { adjustedAvg, finalRating } = calculateFIFARating(players);
-          if (finalRating === targetRating && adjustedAvg >= minTarget && adjustedAvg <= maxTarget) {
-            bestCombo = testCombo;
-            ifRating = ifRatingCandidate;
-            replacedRating = rating;
-            replaced = true;
-            break;
-          }
         }
+        
+        if (!replaced) return null; // Non possiamo soddisfare il requisito IF
       }
-      
-      if (!replaced) return null; // Non possiamo soddisfare il requisito IF
+
+      return { combo: bestCombo, ifRating, replacedRating };
     }
-    
-    return { 
-      combo: bestCombo,
-      ifRating,
-      replacedRating
-    };
+
+    // Se non ci sono combinazioni valide secondo la media, prova ora i fallback patterns
+    // Solo se NON serve una IF (per semplicità) – i pattern sono "senza controllo media" come richiesto
+    if (!needsIF) {
+      const fallback = tryFallbackPatterns(targetRating, available);
+      if (fallback) {
+        return { combo: fallback.combo, fallbackUsed: true, patternName: fallback.patternName };
+      }
+    }
+
+    return null;
   };
 
   const calculateSquads = () => {
@@ -250,7 +292,9 @@ const FIFASquadCalculator = () => {
               players,
               needsIF: target.needsIF,
               ifRating: comboResult.ifRating,
-              replacedRating: comboResult.replacedRating
+              replacedRating: comboResult.replacedRating,
+              fallbackUsed: !!comboResult.fallbackUsed,
+              patternName: comboResult.patternName || null
             });
           } else {
             result.push({
@@ -294,17 +338,14 @@ const FIFASquadCalculator = () => {
       const withIF = prev.find(t => t.rating === rating && t.needsIF === true);
       const withoutIF = prev.find(t => t.rating === rating && t.needsIF === false);
       
-      // Se clicco sulla stella di una rosa senza IF
       if (!currentNeedsIF && withoutIF && withoutIF.count > 0) {
         if (withoutIF.count === 1) {
-          // Se ce n'è solo una, cambia il flag
           return prev.map(t => 
             t.rating === rating && t.needsIF === false
               ? { ...t, needsIF: true }
               : t
           );
         } else {
-          // Se ce ne sono più di una, riduci di 1 quella senza IF e aggiungi/incrementa quella con IF
           const newSquads = prev.map(t => 
             t.rating === rating && t.needsIF === false
               ? { ...t, count: t.count - 1 }
@@ -323,17 +364,14 @@ const FIFASquadCalculator = () => {
         }
       }
       
-      // Se clicco sulla stella di una rosa con IF
       if (currentNeedsIF && withIF && withIF.count > 0) {
         if (withIF.count === 1) {
-          // Se ce n'è solo una, cambia il flag
           return prev.map(t => 
             t.rating === rating && t.needsIF === true
               ? { ...t, needsIF: false }
               : t
           );
         } else {
-          // Se ce ne sono più di una, riduci di 1 quella con IF e aggiungi/incrementa quella senza IF
           const newSquads = prev.map(t => 
             t.rating === rating && t.needsIF === true
               ? { ...t, count: t.count - 1 }
@@ -516,8 +554,13 @@ const FIFASquadCalculator = () => {
                           <Users className="w-6 h-6 text-yellow-400" />
                           <h2 className="text-xl font-bold text-white">Squadra #{sol.squadNum}</h2>
                         </div>
-                        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold text-2xl px-4 py-2 rounded-lg">
-                          {sol.finalRating}
+                        <div className="flex items-center gap-2">
+                          {sol.fallbackUsed && (
+                            <div className="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded mr-2">Fallback: {sol.patternName}</div>
+                          )}
+                          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold text-2xl px-4 py-2 rounded-lg">
+                            {sol.finalRating}
+                          </div>
                         </div>
                       </div>
                       
