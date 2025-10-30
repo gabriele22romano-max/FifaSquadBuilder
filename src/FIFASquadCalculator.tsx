@@ -41,16 +41,15 @@ const FIFASquadCalculator = () => {
     
     let adjustedAvg = adjustedTotal / count;
     
-    // Regola speciale EA: se la combinazione è esattamente (z+1)x1, (z)x6, (z-1)x3, (z-2)x1
-    // aggiungi +0.7 alla media aggiustata
+    // Controllo speciale: se la combinazione è (z+1)x1, (z)x6, (z-1)x3, (z-2)x1
     if (targetRating !== null && players.length === 4) {
-      const sorted = [...players].sort((a, b) => b.rating - a.rating);
+      const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
       
-      if (sorted[0].rating === targetRating + 1 && sorted[0].count === 1 &&
-          sorted[1].rating === targetRating && sorted[1].count === 6 &&
-          sorted[2].rating === targetRating - 1 && sorted[2].count === 3 &&
-          sorted[3].rating === targetRating - 2 && sorted[3].count === 1) {
-        adjustedAvg += 0.7;
+      if (sortedPlayers[0].rating === targetRating + 1 && sortedPlayers[0].count === 1 &&
+          sortedPlayers[1].rating === targetRating && sortedPlayers[1].count === 6 &&
+          sortedPlayers[2].rating === targetRating - 1 && sortedPlayers[2].count === 3 &&
+          sortedPlayers[3].rating === targetRating - 2 && sortedPlayers[3].count === 1) {
+        adjustedAvg += 0.04;
       }
     }
     
@@ -116,18 +115,8 @@ const FIFASquadCalculator = () => {
     
     if (validCombinations.length === 0) return null;
     
-    // Ordina per: 1) Diversità (risparmio carte alte), 2) Media più bassa
-    // Questo approccio garantisce più flessibilità per completare tutte le rose
+    // Ordina per: 1) Media più bassa, 2) Risparmio carte ALTE (non basse)
     validCombinations.sort((a, b) => {
-      // Prima priorità: risparmia le carte alte (diversità)
-      const diversityA = calculateDiversityScore(a);
-      const diversityB = calculateDiversityScore(b);
-      
-      if (Math.abs(diversityA - diversityB) > 0.5) {
-        return diversityA - diversityB;
-      }
-      
-      // Seconda priorità: media più bassa (solo se diversità simile)
       const playersA = [];
       const playersB = [];
       
@@ -141,7 +130,13 @@ const FIFASquadCalculator = () => {
       const { adjustedAvg: avgA } = calculateFIFARating(playersA, targetRating);
       const { adjustedAvg: avgB } = calculateFIFARating(playersB, targetRating);
       
-      return avgA - avgB;
+      // Prima priorità: media più bassa
+      if (Math.abs(avgA - avgB) > 0.01) {
+        return avgA - avgB;
+      }
+      
+      // Seconda priorità: usa meno carte ALTE (risparmia le carte rare)
+      return calculateDiversityScore(a) - calculateDiversityScore(b);
     });
     
     let bestCombo = validCombinations[0];
