@@ -49,7 +49,7 @@ const FIFASquadCalculator = () => {
           sortedPlayers[1].rating === targetRating && sortedPlayers[1].count === 6 &&
           sortedPlayers[2].rating === targetRating - 1 && sortedPlayers[2].count === 3 &&
           sortedPlayers[3].rating === targetRating - 2 && sortedPlayers[3].count === 1) {
-        adjustedAvg += 0.02;
+        adjustedAvg += 0.05;
       }
     }
     
