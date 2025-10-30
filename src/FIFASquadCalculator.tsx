@@ -58,118 +58,6 @@ const FIFASquadCalculator = () => {
     return score;
   };
 
-  // Funzione per verificare le combinazioni fallback
-  const tryFallbackPatterns = (targetRating, available, needsIF = false) => {
-    const patterns = [
-      // Pattern 1: 1x(+1), 6x(=), 3x(-1), 1x(-2)
-      { pattern: { [targetRating + 1]: 1, [targetRating]: 6, [targetRating - 1]: 3, [targetRating - 2]: 1 }, name: "1x(+1), 6x(=), 3x(-1), 1x(-2)" },
-      // Pattern 2: 9x(=), 2x(-1)
-      { pattern: { [targetRating]: 9, [targetRating - 1]: 2 }, name: "9x(=), 2x(-1)" },
-      // Pattern 3: 2x(+1), 3x(=), 6x(-1)
-      { pattern: { [targetRating + 1]: 2, [targetRating]: 3, [targetRating - 1]: 6 }, name: "2x(+1), 3x(=), 6x(-1)" },
-      // Pattern 4: 3x(+1), 2x(=), 3x(-1), 3x(-2)
-      { pattern: { [targetRating + 1]: 3, [targetRating]: 2, [targetRating - 1]: 3, [targetRating - 2]: 3 }, name: "3x(+1), 2x(=), 3x(-1), 3x(-2)" }
-    ];
-
-    for (const { pattern, name } of patterns) {
-      // Verifica se tutte le valutazioni richieste sono disponibili nell'inventario
-      const allRatingsAvailable = Object.keys(pattern).every(rating => {
-        const ratingNum = parseInt(rating);
-        return ratingNum >= 80 && ratingNum <= 93 && available[rating] !== undefined;
-      });
-
-      if (!allRatingsAvailable) continue;
-
-      // Verifica la disponibilità delle carte
-      let hasEnoughCards = true;
-      const testCombo = {};
-      
-      for (const [rating, count] of Object.entries(pattern)) {
-        const ratingNum = parseInt(rating);
-        if (available[ratingNum].available < count) {
-          hasEnoughCards = false;
-          break;
-        }
-        testCombo[ratingNum] = count;
-      }
-
-      if (!hasEnoughCards) continue;
-
-      // Verifica il rating FIFA
-      const players = [];
-      for (const [rating, count] of Object.entries(testCombo)) {
-        players.push({ rating: parseInt(rating), count });
-      }
-
-      const { adjustedAvg, finalRating } = calculateFIFARating(players);
-      const minTarget = targetRating - 1 + 0.96;
-      const maxTarget = targetRating + 0.95;
-
-      if (finalRating === targetRating && adjustedAvg >= minTarget && adjustedAvg <= maxTarget) {
-        // Controllo requisito IF
-        let ifRating = null;
-        let replacedRating = null;
-
-        if (needsIF) {
-          // Cerca la carta più bassa da sostituire con una IF
-          const sortedRatings = Object.keys(testCombo)
-            .map(Number)
-            .sort((a, b) => a - b);
-
-          const availableIFs = Object.keys(available)
-            .map(Number)
-            .filter(r => available[r].if > 0)
-            .sort((a, b) => a - b);
-
-          let replaced = false;
-
-          for (const ifRatingCandidate of availableIFs) {
-            if (replaced) break;
-
-            for (const rating of sortedRatings) {
-              const newCombo = { ...testCombo };
-              newCombo[rating] = (newCombo[rating] || 0) - 1;
-              if (newCombo[rating] === 0) delete newCombo[rating];
-              newCombo[ifRatingCandidate] = (newCombo[ifRatingCandidate] || 0) + 1;
-
-              // Verifica disponibilità
-              if (newCombo[rating] !== undefined && newCombo[rating] < 0) continue;
-              if (newCombo[ifRatingCandidate] > available[ifRatingCandidate].available + 1) continue;
-
-              // Verifica rating
-              const newPlayers = [];
-              for (const [r, count] of Object.entries(newCombo)) {
-                if (count > 0) {
-                  newPlayers.push({ rating: parseInt(r), count });
-                }
-              }
-
-              const { adjustedAvg: newAvg, finalRating: newFinal } = calculateFIFARating(newPlayers);
-              if (newFinal === targetRating && newAvg >= minTarget && newAvg <= maxTarget) {
-                Object.assign(testCombo, newCombo);
-                ifRating = ifRatingCandidate;
-                replacedRating = rating;
-                replaced = true;
-                break;
-              }
-            }
-          }
-
-          if (needsIF && !replaced) continue;
-        }
-
-        return {
-          combo: testCombo,
-          patternName: name,
-          ifRating,
-          replacedRating
-        };
-      }
-    }
-
-    return null;
-  };
-
   const findCombination = (targetRating, available, needsIF = false) => {
     const squadSize = 11;
     const minTarget = targetRating - 1 + 0.96;
@@ -212,10 +100,7 @@ const FIFASquadCalculator = () => {
     
     tryCombo(0, {}, squadSize);
     
-    if (validCombinations.length === 0) {
-      // Prova le combinazioni fallback
-      return tryFallbackPatterns(targetRating, available, needsIF);
-    }
+    if (validCombinations.length === 0) return null;
     
     // Ordina per: 1) media aggiustata più bassa (più vicina al minimo), 2) diversità
     validCombinations.sort((a, b) => {
@@ -365,8 +250,7 @@ const FIFASquadCalculator = () => {
               players,
               needsIF: target.needsIF,
               ifRating: comboResult.ifRating,
-              replacedRating: comboResult.replacedRating,
-              patternName: comboResult.patternName || null
+              replacedRating: comboResult.replacedRating
             });
           } else {
             result.push({
@@ -384,7 +268,105 @@ const FIFASquadCalculator = () => {
     }, 100);
   };
 
-  // ... il resto del codice rimane invariato ...
+  const updateInventory = (rating, field, value) => {
+    setInventory(prev => ({
+      ...prev,
+      [rating]: {
+        ...prev[rating],
+        [field]: Math.max(0, parseInt(value) || 0)
+      }
+    }));
+  };
+
+  const addTargetSquad = (rating) => {
+    const existing = targetSquads.find(t => t.rating === rating && t.needsIF === false);
+    if (existing) {
+      setTargetSquads(prev => prev.map(t => 
+        t.rating === rating && t.needsIF === false ? { ...t, count: t.count + 1 } : t
+      ));
+    } else {
+      setTargetSquads(prev => [...prev, { rating, count: 1, needsIF: false }]);
+    }
+  };
+
+  const toggleIF = (rating, currentNeedsIF) => {
+    setTargetSquads(prev => {
+      const withIF = prev.find(t => t.rating === rating && t.needsIF === true);
+      const withoutIF = prev.find(t => t.rating === rating && t.needsIF === false);
+      
+      // Se clicco sulla stella di una rosa senza IF
+      if (!currentNeedsIF && withoutIF && withoutIF.count > 0) {
+        if (withoutIF.count === 1) {
+          // Se ce n'è solo una, cambia il flag
+          return prev.map(t => 
+            t.rating === rating && t.needsIF === false
+              ? { ...t, needsIF: true }
+              : t
+          );
+        } else {
+          // Se ce ne sono più di una, riduci di 1 quella senza IF e aggiungi/incrementa quella con IF
+          const newSquads = prev.map(t => 
+            t.rating === rating && t.needsIF === false
+              ? { ...t, count: t.count - 1 }
+              : t
+          );
+          
+          if (withIF) {
+            return newSquads.map(t =>
+              t.rating === rating && t.needsIF === true
+                ? { ...t, count: t.count + 1 }
+                : t
+            );
+          } else {
+            return [...newSquads, { rating, count: 1, needsIF: true }];
+          }
+        }
+      }
+      
+      // Se clicco sulla stella di una rosa con IF
+      if (currentNeedsIF && withIF && withIF.count > 0) {
+        if (withIF.count === 1) {
+          // Se ce n'è solo una, cambia il flag
+          return prev.map(t => 
+            t.rating === rating && t.needsIF === true
+              ? { ...t, needsIF: false }
+              : t
+          );
+        } else {
+          // Se ce ne sono più di una, riduci di 1 quella con IF e aggiungi/incrementa quella senza IF
+          const newSquads = prev.map(t => 
+            t.rating === rating && t.needsIF === true
+              ? { ...t, count: t.count - 1 }
+              : t
+          );
+          
+          if (withoutIF) {
+            return newSquads.map(t =>
+              t.rating === rating && t.needsIF === false
+                ? { ...t, count: t.count + 1 }
+                : t
+            );
+          } else {
+            return [...newSquads, { rating, count: 1, needsIF: false }];
+          }
+        }
+      }
+      
+      return prev;
+    });
+  };
+
+  const removeTargetSquad = (rating, needsIF) => {
+    setTargetSquads(prev => {
+      const existing = prev.find(t => t.rating === rating && t.needsIF === needsIF);
+      if (existing && existing.count > 1) {
+        return prev.map(t => 
+          t.rating === rating && t.needsIF === needsIF ? { ...t, count: t.count - 1 } : t
+        );
+      }
+      return prev.filter(t => !(t.rating === rating && t.needsIF === needsIF));
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-6">
@@ -538,15 +520,6 @@ const FIFASquadCalculator = () => {
                           {sol.finalRating}
                         </div>
                       </div>
-                      
-                      {sol.patternName && (
-                        <div className="mb-3 bg-green-600/20 border border-green-600/50 rounded-lg p-2 text-green-300 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">Combinazione Predefinita:</span>
-                            <span>{sol.patternName}</span>
-                          </div>
-                        </div>
-                      )}
                       
                       {sol.needsIF && sol.ifRating && (
                         <div className="mb-3 bg-yellow-600/20 border border-yellow-600/50 rounded-lg p-2 text-yellow-300 text-sm">
