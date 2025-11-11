@@ -6,3 +6,472 @@ body {
   margin: 0;
   font-family: sans-serif;
 }
+/* Root variables for FIFA-like colors */
+:root {
+  --fifa-bg-dark: #0f1e2d;
+  --fifa-bg-dark-alt: #14293d;
+  --fifa-bg-yellow: #ffcc00;
+  --fifa-bg-yellow-dark: #b38f00;
+  --fifa-text-white: #f0f0f0;
+  --fifa-text-gray: #a0a8b8;
+  --fifa-text-dark-gray: #707880;
+  --fifa-border-yellow: #ffcc00cc;
+  --fifa-green: #00b386;
+  --fifa-green-dark: #008055;
+  --fifa-red: #d32f2f;
+  --fifa-red-dark: #9a2424;
+  --fifa-input-bg: #1a2a44;
+  --fifa-input-border: #244060;
+  --fifa-btn-hover-dark: #3682ff;
+  --fifa-gradient-yellow: linear-gradient(90deg, #ffcc00, #ffd633);
+}
+
+/* General body background and font */
+body, html, #root, .min-h-screen {
+  background: var(--fifa-bg-dark);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--fifa-text-white);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container styling */
+.max-w-7xl {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1120px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Card base for panels */
+.bg-white\x2f10, .bg-white\x2f5 {
+  background-color: var(--fifa-bg-dark-alt) !important;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  backdrop-filter: saturate(160%) blur(15px);
+}
+
+/* Headers */
+h1, h2, h3 {
+  font-weight: 700;
+  text-shadow: 0 0 5px rgba(255,204,0,0.75);
+  color: var(--fifa-bg-yellow);
+}
+
+/* Main heading */
+h1.text-3xl {
+  font-size: 2.5rem;
+  letter-spacing: 0.05em;
+}
+
+/* Subtitle heading 2 */
+h2.text-xl {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Smaller heading */
+h3.text-xl {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* Calculator header panel */
+.bg-white\x2f10.p-8 {
+  padding: 2rem;
+}
+
+/* Inventory & Target squads container */
+.grid.grid-cols-1.lg\:grid-cols-2.gap-6 {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Inventory items */
+.bg-white\x2f10.rounded-lg.p-3 {
+  background-color: var(--fifa-bg-dark) !important;
+  border-radius: 0.75rem;
+  border: 1px solid var(--fifa-input-border);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Rating number on inventory and targets */
+.text-yellow-400, .font-bold.text-yellow-400 {
+  font-weight: 700;
+  color: var(--fifa-bg-yellow);
+  text-shadow: 0 0 7px #ffcc00cc;
+  font-size: 1.25rem;
+  user-select: none;
+}
+
+/* Inputs style */
+input[type=number] {
+  background-color: var(--fifa-input-bg);
+  border: 1px solid var(--fifa-input-border);
+  color: var(--fifa-text-white);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.25s ease;
+}
+
+input[type=number]:focus {
+  border-color: var(--fifa-bg-yellow);
+  outline: none;
+  box-shadow: 0 0 6px var(--fifa-bg-yellow);
+}
+
+/* IF inputs distinct style */
+input[type=number][class*="bg-yellow-900"], /* from your original class with bg-yellow-900/30 */
+input[type=number].if-input {
+  background-color: rgba(255, 204, 0, 0.15);
+  border: 1px solid rgba(255, 204, 0, 0.5);
+  color: var(--fifa-bg-yellow);
+  font-weight: 700;
+}
+
+/* Labels */
+label {
+  color: var(--fifa-text-gray);
+  font-size: 0.7rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+/* Button Base */
+button {
+  cursor: pointer;
+  transition: background 0.3s ease;
+  user-select: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 0.75rem;
+  border: none;
+  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+/* Buttons: Add target rating */
+button.bg-green-600 {
+  background-color: var(--fifa-green);
+  color: var(--fifa-text-white);
+  box-shadow: 0 0 15px var(--fifa-green);
+  text-shadow: 0 0 3px #00b386cc;
+}
+
+button.bg-green-600:hover {
+  background-color: var(--fifa-green-dark);
+  box-shadow: 0 0 20px var(--fifa-green-dark);
+}
+
+/* Calculate button */
+button.bg-blue-600 {
+  background-color: #0078ff;
+  color: var(--fifa-text-white);
+  box-shadow: 0 0 15px #0078ffcc;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+button.bg-blue-600:hover:not(:disabled) {
+  background-color: #005bbb;
+  box-shadow: 0 0 25px #005bbbcc;
+}
+
+button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Target squads container */
+.bg-white\x2f5.rounded-xl {
+  padding: 1.5rem;
+}
+
+/* Each target squad item */
+.bg-white\x2f10.rounded-lg.p-3.flex {
+  background-color: var(--fifa-bg-dark) !important;
+  border: 1px solid var(--fifa-input-border);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Target rating pill background */
+div[class*="bg-gradient-to-r"][class*="from-yellow"] {
+  font-weight: 700;
+  color: black;
+  padding: 0.2rem 0.75rem;
+  border-radius: 0.5rem;
+  user-select: none;
+  box-shadow: 0 0 6px var(--fifa-bg-yellow);
+  text-align: center;
+}
+
+/* IF pill style */
+.bg-yellow-600\/30, .text-yellow-300 {
+  background-color: rgba(255, 204, 0, 0.3);
+  color: var(--fifa-bg-yellow);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* IF toggle button */
+button.p-2.rounded-lg {
+  background-color: var(--fifa-input-bg);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.3rem;
+  transition: background-color 0.3s ease;
+}
+
+button.p-2.rounded-lg.bg-yellow-600 {
+  background-color: var(--fifa-bg-yellow);
+  color: black;
+}
+
+button.p-2.rounded-lg:hover {
+  background-color: var(--fifa-bg-yellow);
+  color: black;
+}
+
+/* Remove button */
+button.bg-red-600 {
+  background-color: var(--fifa-red);
+  color: var(--fifa-text-white);
+  border-radius: 0.5rem;
+  padding: 0.3rem;
+}
+
+button.bg-red-600:hover {
+  background-color: var(--fifa-red-dark);
+}
+
+/* Results grid */
+.grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3.gap-6 {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Individual result card */
+.backdrop-blur-lg.rounded-xl {
+  background-color: var(--fifa-bg-dark-alt);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+  border-width: 2px;
+  border-style: solid;
+}
+
+.backdrop-blur-lg.rounded-xl.border-red-500 {
+  border-color: var(--fifa-red);
+  background-color: rgba(211, 47, 47, 0.15);
+}
+
+.backdrop-blur-lg.rounded-xl.border-white\/20 {
+  border-color: var(--fifa-bg-yellow);
+}
+
+/* Failure message styling */
+.text-red-400 {
+  color: var(--fifa-red);
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+/* Titles in results */
+.flex.items-center, .flex.justify-between {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text-white, .text-white.font-semibold {
+  color: var(--fifa-text-white);
+  font-weight: 700;
+}
+
+/* Highlight final rating */
+.bg-gradient-to-r.from-yellow-400.to-orange-500 {
+  background-image: linear-gradient(90deg, #ffcc00, #ff7f00);
+  color: black !important;
+  padding: 0.25rem 0.8rem;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  font-size: 1.5rem;
+  user-select: none;
+  box-shadow: 0 0 12px #ffcc00;
+}
+
+/* Adjusted avg and rounded text */
+.text-gray-300 {
+  color: var(--fifa-text-dark-gray);
+  font-size: 0.875rem;
+}
+
+.text-green-400 {
+  color: #00cc44;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Player composition item */
+.flex.justify-between.items-center.bg-white\x2f5.rounded.px-3.py-2 {
+  background-color: var(--fifa-bg-dark);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.25rem;
+  color: var(--fifa-text-white);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.bg-blue-500 {
+  background-color: #0078ff !important;
+  color: var(--fifa-text-white);
+  padding: 0.25rem 0.8rem;
+  border-radius: 9999px; /* full pill */
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+
+/* Usage summary grid */
+.grid.grid-cols-2.md\:grid-cols-4.lg\:grid-cols-7.gap-4 {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+}
+
+.bg-white\x2f5.rounded-lg.p-3.text-center {
+  background-color: var(--fifa-bg-dark-alt);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: var(--fifa-text-white);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  user-select: none;
+}
+
+/* Usage numbers */
+.text-gray-300.text-xs {
+  font-size: 0.75rem;
+  color: var(--fifa-text-dark-gray);
+  font-weight: 600;
+}
+
+.text-yellow-300 {
+  color: var(--fifa-bg-yellow);
+  font-weight: 700;
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+/* Scroll area */
+.max-h-96, .max-h-64 {
+  max-height: 24rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.space-y-3 > * + *, .space-y-2 > * + * {
+  margin-top: 0.75rem;
+}
+
+.flex.items-center.gap-3 {
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Icon colors override */
+svg.w-8.h-8.text-yellow-400, svg.text-yellow-400, svg.text-white {
+  fill: var(--fifa-bg-yellow);
+  stroke: var(--fifa-bg-yellow);
+}
+
+/* Star icon color specialized */
+svg.w-3.h-3.text-yellow-400 {
+  stroke: var(--fifa-bg-yellow);
+  fill: var(--fifa-bg-yellow);
+}
+
+/* Tooltip styling (for star toggle button) */
+[title] {
+  position: relative;
+}
+
+[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--fifa-bg-yellow);
+  color: #000;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  visibility: visible;
+  z-index: 20;
+}
+
+[title]::after {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1024px) {
+  /* On smaller screens stack inventory and targets vertically */
+  .grid.grid-cols-1.lg\:grid-cols-2.gap-6 {
+    grid-template-columns: 1fr;
+  }
+  .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3.gap-6 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3.gap-6 {
+    grid-template-columns: 1fr;
+  }
+  .text-3xl {
+    font-size: 1.8rem;
+  }
+  button {
+    font-size: 0.8rem;
+  }
+}
